@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.personnel import check_assignee
 from app.store import store
 
 MODULE = "task"
@@ -46,16 +47,27 @@ class TaskService:
         rows.append(entry)
         return entry, []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def run_action(self, entry_id: int, action: str, values: dict[str, Any] | None = None) -> tuple[dict[str, Any] | None, str]:
         entry = store.find(MODULE, entry_id)
         if entry is None:
             return None, f"检测任务 {entry_id} 不存在或已归档"
         if action not in ACTION_RULES:
             return None, f"动作「{action}」不属于检测任务可执行范围"
+        note = ""
+        if action == "派发任务":
+            # 派发前核查承检人员资质：未登记、已过期、暂停承接一律拦下并说明原因。
+            assignee = str((values or {}).get("承检人员") or entry.get("承检人员") or "").strip()
+            allowed, note = check_assignee(assignee)
+            if not allowed:
+                return None, note
+            entry["承检人员"] = assignee
         target = ACTION_RULES[action]
         if target not in STATUS_ORDER:
             return None, f"目标状态「{target}」不在允许的状态序列里"
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
-        return entry, f"检测任务已{action}"
+        message = f"检测任务已{action}"
+        if note:
+            message = f"{message}（{note}）"
+        return entry, message

@@ -19,6 +19,8 @@ const Qc = () => import('@/views/qc/index.vue')
 const Complaint = () => import('@/views/complaint/index.vue')
 const Stockin = () => import('@/views/stockin/index.vue')
 const Settlement = () => import('@/views/settlement/index.vue')
+const Personnel = () => import('@/views/personnel/index.vue')
+const Training = () => import('@/views/training/index.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -42,6 +44,8 @@ const router = createRouter({
     { path: '/complaint', name: 'complaint', component: Complaint },
     { path: '/stockin', name: 'stockin', component: Stockin },
     { path: '/settlement', name: 'settlement', component: Settlement },
+    { path: '/personnel', name: 'personnel', component: Personnel },
+    { path: '/training', name: 'training', component: Training },
   ],
 })
 
