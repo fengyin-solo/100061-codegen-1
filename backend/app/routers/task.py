@@ -50,9 +50,12 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 
 @router.post("/{entry_id}/actions", response_model=ActionResult)
 def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
-    """对单条检测任务执行派发任务、提交复核、确认完成；不允许的动作会被拦下并说明原因。"""
+    """对单条检测任务执行派发任务、提交复核、确认完成；不允许的动作会被拦下并说明原因。
+
+    派发任务时承检人员须随 values 一并提交，资质未登记或证书已过期会被拦下。
+    """
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+    entry, message = service.run_action(entry_id, action, payload.values)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)

@@ -244,3 +244,15 @@ class SettlementEntry(BaseModel):
     field_5: str | None = None  # 已收金额
     field_6: str | None = None  # 开票状态
     field_7: str | None = None  # 结算状态
+
+class QualificationEntry(BaseModel):
+    """人员资质明细结构。"""
+
+    field_0: str | None = None  # 人员编号
+    field_1: str | None = None  # 姓名
+    field_2: str | None = None  # 岗位
+    field_3: str | None = None  # 证书名称
+    field_4: str | None = None  # 证书编号
+    field_5: str | None = None  # 培训日期
+    field_6: str | None = None  # 证书到期日
+    field_7: str | None = None  # 承接状态

@@ -1,8 +1,13 @@
-"""检测任务业务规则：状态流转、字段校验与筛选口径都收在这里。"""
+"""检测任务业务规则：状态流转、字段校验与筛选口径都收在这里。
+
+派发任务的承检人员必须通过人员资质校验：资质未登记、证书已过期或暂停承接的
+一律拦下并说明原因，不允许照常派发；其余动作与既有任务记录的行为保持不变。
+"""
 from __future__ import annotations
 
 from typing import Any
 
+from app.services.qualification import qualification_service
 from app.store import store
 
 MODULE = "task"
@@ -46,16 +51,31 @@ class TaskService:
         rows.append(entry)
         return entry, []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def run_action(
+        self,
+        entry_id: int,
+        action: str,
+        values: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any] | None, str]:
         entry = store.find(MODULE, entry_id)
         if entry is None:
             return None, f"检测任务 {entry_id} 不存在或已归档"
         if action not in ACTION_RULES:
             return None, f"动作「{action}」不属于检测任务可执行范围"
+        notice = ""
+        if action == "派发任务":
+            operator = str((values or {}).get("承检人员") or "").strip()
+            if not operator:
+                return None, "派发任务前请先填写承检人员，并确认其资质已登记且在有效期内"
+            ok, message = qualification_service.check_assignable(operator)
+            if not ok:
+                return None, message
+            entry["承检人员"] = operator
+            notice = f"（{message}）"
         target = ACTION_RULES[action]
         if target not in STATUS_ORDER:
             return None, f"目标状态「{target}」不在允许的状态序列里"
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
-        return entry, f"检测任务已{action}"
+        return entry, f"检测任务已{action}{notice}"

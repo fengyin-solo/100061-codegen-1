@@ -57,6 +57,7 @@
 
     <footer class="page-foot">
       <span>共 {{ total }} 条检测任务记录</span>
+      <span v-if="noticeMessage" class="notice-text">{{ noticeMessage }}</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -78,6 +79,7 @@ const stats = [{"label": "待派发任务", "value": 0}, {"label": "检测中任
 const rows = ref<Row[]>([])
 const total = ref(0)
 const errorMessage = ref('')
+const noticeMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
 
@@ -96,14 +98,29 @@ function openCreate() {
 
 async function runAction(action: string, row: Row) {
   errorMessage.value = ''
+  noticeMessage.value = ''
+  const values: Record<string, string> = { action }
+  if (action === '派发任务') {
+    const operator = window.prompt('请输入承检人员姓名（将校验其资质已登记且证书在有效期内）')
+    if (operator === null) {
+      return
+    }
+    if (!operator.trim()) {
+      errorMessage.value = '承检人员不能为空，派发已取消'
+      return
+    }
+    values['承检人员'] = operator.trim()
+  }
   try {
     const response = await request(`${ENDPOINT}/${row.id}/actions`, {
       method: 'POST',
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ values }),
     })
-    if (!response.ok) {
-      throw new Error('检测任务动作未生效，请稍后重试')
+    const payload = await response.json()
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.message ?? '检测任务动作未生效，请稍后重试')
     }
+    noticeMessage.value = payload.message ?? ''
     await reload()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '检测任务操作失败'
